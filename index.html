@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Digital Brochure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap");
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+
+      .book-wrapper {
+        perspective: 2000px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem 1rem;
+        flex-grow: 1;
+      }
+
+      .book {
+        position: relative;
+        /* Adaptive sizing: max-width caps it on desktop, 95vw lets it fill mobile */
+        width: min(95vw, 1000px);
+        /* Aspect ratio for an open book layout (approx two 8.5x11 pages side-by-side) */
+        aspect-ratio: 2 / 1.35;
+        transform-style: preserve-3d;
+        transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+      }
+
+      /* Translation states to keep the active pages centered on screen */
+      .book.state-start {
+        transform: translateX(-25%);
+      }
+      .book.state-center {
+        transform: translateX(0%);
+      }
+      .book.state-end {
+        transform: translateX(25%);
+      }
+
+      /* Responsive adjustments for mobile: reduce translation shift so it doesn't overflow */
+      @media (max-width: 768px) {
+        .book {
+          aspect-ratio: 2 / 1.5; /* Slightly taller on mobile for better text fit */
+        }
+        .book.state-start {
+          transform: translateX(-20%);
+        }
+        .book.state-end {
+          transform: translateX(20%);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .book {
+          aspect-ratio: 2 / 1.8; /* Even taller on small phones */
+        }
+        .book.state-start {
+          transform: translateX(-15%);
+        }
+        .book.state-end {
+          transform: translateX(15%);
+        }
+      }
+
+      .leaf {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 50%;
+        height: 100%;
+        transform-style: preserve-3d;
+        transform-origin: left center;
+        transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+        cursor: pointer;
+      }
+
+      .leaf.flipped {
+        transform: rotateY(-180deg);
+      }
+
+      /* The actual visible faces of the pages */
+      .face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        background-color: #ffffff;
+        border-radius: 2px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        /* Fluid typography and padding using clamp */
+        padding: clamp(0.5rem, 3vw, 2.5rem);
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Front faces represent right-side pages */
+      .face-front {
+        /* Inner shadow simulating the book crease on the left edge */
+        box-shadow:
+          inset 15px 0 20px -15px rgba(0, 0, 0, 0.2),
+          0 4px 6px rgba(0, 0, 0, 0.05);
+        border-left: 1px solid #eee;
+      }
+
+      /* Back faces represent left-side pages */
+      .face-back {
+        transform: rotateY(180deg);
+        /* Inner shadow simulating the book crease on the right edge */
+        box-shadow:
+          inset -15px 0 20px -15px rgba(0, 0, 0, 0.2),
+          0 4px 6px rgba(0, 0, 0, 0.05);
+        border-right: 1px solid #eee;
+      }
+
+      .placeholder-img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 2px dashed #cbd5e1;
+        display: block;
+      }
+
+      .cover-img {
+        height: 100%;
+        border: none;
+        border-radius: 0;
+      }
+
+      /* Fluid typography classes */
+      .fluid-h1 {
+        font-size: clamp(1.25rem, 3vw, 2.5rem);
+        line-height: 1.2;
+      }
+      .fluid-h2 {
+        font-size: clamp(1rem, 2.5vw, 1.8rem);
+        line-height: 1.3;
+      }
+      .fluid-p {
+        font-size: clamp(0.6rem, 1.3vw, 1rem);
+        line-height: 1.5;
+      }
+
+      .interactive-btn {
+        transition: all 0.2s ease;
+      }
+      .interactive-btn:active {
+        transform: scale(0.95);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="text-center pt-8 pb-4">
+      <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">
+        Interactive Digital Brochure
+      </h1>
+      <p class="text-gray-500 mt-2 text-sm md:text-base">
+        Click the pages or use the buttons below to flip through the booklet.
+      </p>
+    </header>
+
+    <main class="book-wrapper">
+      <div class="book state-start" id="book">
+        <!-- LEAF 1: Cover / Inside Cover -->
+        <div class="leaf" id="leaf-0">
+          <!-- FRONT: Front Cover (Right Side) -->
+          <div class="face face-front p-0">
+            <div class="relative w-full h-full group">
+              <img
+                src="https://placehold.co/800x1200/1e293b/ffffff?text=Cover+Design\n(Canva+Placeholder)"
+                alt="Front Cover"
+                class="w-full h-full object-cover cover-img"
+              />
+              <div class="absolute bottom-10 left-0 w-full text-center px-4">
+                <h2 class="text-white fluid-h1 font-bold shadow-sm">
+                  Premium Real Estate
+                </h2>
+                <p class="text-gray-300 fluid-p mt-2">2026 Collection</p>
+              </div>
+            </div>
+          </div>
+          <!-- BACK: Inside Cover (Left Side) -->
+          <div class="face face-back bg-slate-50">
+            <h2
+              class="fluid-h2 font-bold text-slate-800 mb-4 border-b-2 border-indigo-500 pb-2 inline-block"
+            >
+              Welcome
+            </h2>
+            <p class="fluid-p text-gray-600 mb-6 flex-grow">
+              Welcome to our interactive digital brochure. This space is perfect
+              for your introduction, mission statement, or a welcome letter from
+              the CEO.
+              <br /><br />
+              Tap the phone number below on your mobile device to call us
+              directly!
+            </p>
+            <div
+              class="mt-auto bg-white p-4 rounded-lg shadow-sm border border-slate-100 text-center"
+            >
+              <p class="text-sm text-gray-500 mb-1">Direct Line</p>
+              <!-- TEL LINK EXAMPLE -->
+              <a
+                href="tel:+18005550199"
+                class="text-indigo-600 font-bold fluid-h2 hover:text-indigo-800 transition-colors flex items-center justify-center gap-2"
+              >
+                📞 1-800-555-0199
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEAF 2: Page 1 / Page 2 -->
+        <div class="leaf" id="leaf-1">
+          <!-- FRONT: Page 1 (Right Side) -->
+          <div class="face face-front">
+            <h3 class="fluid-h2 font-semibold text-slate-800 mb-3">
+              Featured Property
+            </h3>
+            <img
+              src="https://placehold.co/600x400/e2e8f0/475569?text=Insert+Canva+Design\n(Property+1)"
+              alt="Property Placeholder"
+              class="placeholder-img mb-4 flex-grow max-h-[50%]"
+            />
+            <p class="fluid-p text-gray-600 mb-4">
+              Beautiful properties handpicked for you. Easily insert your
+              high-quality Canva exports right here.
+            </p>
+            <!-- EXTERNAL LINK EXAMPLE -->
+            <a
+              href="https://example.com"
+              target="_blank"
+              class="mt-auto inline-block text-center bg-indigo-600 text-white font-medium rounded-md py-2 px-4 hover:bg-indigo-700 transition-colors fluid-p"
+            >
+              Visit Property Website ↗
+            </a>
+          </div>
+          <!-- BACK: Page 2 (Left Side) -->
+          <div class="face face-back">
+            <h3 class="fluid-h2 font-semibold text-slate-800 mb-3">
+              Amenities & Details
+            </h3>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <img
+                src="https://placehold.co/300x300/f8fafc/64748b?text=Image+1"
+                alt="Amenity 1"
+                class="placeholder-img aspect-square"
+              />
+              <img
+                src="https://placehold.co/300x300/f8fafc/64748b?text=Image+2"
+                alt="Amenity 2"
+                class="placeholder-img aspect-square"
+              />
+            </div>
+            <ul
+              class="list-disc pl-5 fluid-p text-gray-600 space-y-1 flex-grow"
+            >
+              <li>Spacious open-concept living areas</li>
+              <li>Modern appliances and fixtures</li>
+              <li>Smart home integrations</li>
+              <li>24/7 Premium security systems</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- LEAF 3: Page 3 / Back Cover -->
+        <div class="leaf" id="leaf-2">
+          <!-- FRONT: Page 3 (Right Side) -->
+          <div class="face face-front">
+            <h3 class="fluid-h2 font-semibold text-slate-800 mb-3">
+              Client Testimonials
+            </h3>
+            <div
+              class="bg-indigo-50 rounded-lg p-4 mb-4 flex-grow flex flex-col justify-center relative"
+            >
+              <span class="text-4xl text-indigo-200 absolute top-2 left-2"
+                >"</span
+              >
+              <p
+                class="fluid-p text-slate-700 italic relative z-10 text-center font-medium"
+              >
+                An absolutely seamless experience from start to finish. The
+                digital presentation was stunning on my phone!
+              </p>
+              <p class="text-right text-xs font-bold text-indigo-500 mt-2">
+                - Sarah Jenkins
+              </p>
+            </div>
+            <img
+              src="https://placehold.co/600x300/e2e8f0/475569?text=Half+Page+Canva+Graphic"
+              alt="Graphic Placeholder"
+              class="placeholder-img"
+            />
+          </div>
+          <!-- BACK: Back Cover (Left Side) -->
+          <div class="face face-back bg-slate-800 text-white p-0">
+            <div
+              class="w-full h-full flex flex-col items-center justify-center p-6 text-center"
+            >
+              <img
+                src="https://placehold.co/400x400/334155/ffffff?text=Company\nLogo"
+                alt="Logo Placeholder"
+                class="w-1/2 rounded-full mb-6 border-4 border-slate-600 aspect-square object-cover"
+              />
+              <h2 class="fluid-h1 font-bold mb-2">Ready to Start?</h2>
+              <p class="fluid-p text-slate-300 mb-8">
+                Contact our agents today to schedule a personal viewing.
+              </p>
+
+              <div class="flex flex-col gap-3 w-full max-w-[200px]">
+                <a
+                  href="tel:+18005550199"
+                  class="bg-indigo-500 text-white fluid-p font-semibold py-3 px-4 rounded-full shadow-lg hover:bg-indigo-400 transition text-center"
+                >
+                  Call Now
+                </a>
+                <a
+                  href="mailto:info@example.com"
+                  class="bg-slate-700 text-white fluid-p font-semibold py-3 px-4 rounded-full shadow-lg hover:bg-slate-600 transition text-center"
+                >
+                  Email Us
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Navigation Controls -->
+    <div class="flex justify-center items-center gap-6 pb-8 px-4 z-10">
+      <button
+        id="btn-prev"
+        class="interactive-btn flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-6 rounded-full shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed w-32"
+      >
+        <span>&larr;</span> Prev
+      </button>
+      <div
+        class="text-sm font-medium text-gray-500 tracking-widest w-16 text-center"
+      >
+        <span id="page-indicator">Cover</span>
+      </div>
+      <button
+        id="btn-next"
+        class="interactive-btn flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-6 rounded-full shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed w-32"
+      >
+        Next <span>&rarr;</span>
+      </button>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const leaves = document.querySelectorAll(".leaf");
+        const book = document.getElementById("book");
+        const btnNext = document.getElementById("btn-next");
+        const btnPrev = document.getElementById("btn-prev");
+        const pageIndicator = document.getElementById("page-indicator");
+
+        let currentLeaf = 0;
+        const maxLeaves = leaves.length;
+        let isAnimating = false;
+
+        // Initialize Z-indexes so the right side stacks correctly (top page has highest z-index)
+        function initZIndexes() {
+          leaves.forEach((leaf, index) => {
+            leaf.style.zIndex = maxLeaves - index;
+          });
+        }
+        initZIndexes();
+        updateControls();
+
+        // Handle Book Centering based on open/closed state
+        function updateBookPosition() {
+          book.classList.remove("state-start", "state-center", "state-end");
+
+          if (currentLeaf === 0) {
+            book.classList.add("state-start"); // Centered on cover
+            pageIndicator.innerText = "Cover";
+          } else if (currentLeaf === maxLeaves) {
+            book.classList.add("state-end"); // Centered on back cover
+            pageIndicator.innerText = "End";
+          } else {
+            book.classList.add("state-center"); // Fully open, centered on spine
+            pageIndicator.innerText = `${currentLeaf} / ${maxLeaves - 1}`;
+          }
+        }
+
+        // Update disabled states for buttons
+        function updateControls() {
+          btnPrev.disabled = currentLeaf === 0;
+          btnNext.disabled = currentLeaf === maxLeaves;
+        }
+
+        function flipNext() {
+          if (isAnimating || currentLeaf >= maxLeaves) return;
+          isAnimating = true;
+
+          const leafToFlip = leaves[currentLeaf];
+          leafToFlip.classList.add("flipped");
+
+          // Temporarily boost z-index during the flip animation to prevent clipping
+          leafToFlip.style.zIndex = 99;
+
+          // After animation ends, set the final z-index for the left stack
+          setTimeout(() => {
+            // Left stack order: the most recently flipped page must be on top.
+            leafToFlip.style.zIndex = currentLeaf;
+            isAnimating = false;
+          }, 800); // 800ms matches the CSS transition time
+
+          currentLeaf++;
+          updateBookPosition();
+          updateControls();
+        }
+
+        function flipPrev() {
+          if (isAnimating || currentLeaf <= 0) return;
+          isAnimating = true;
+
+          currentLeaf--;
+          const leafToFlip = leaves[currentLeaf];
+          leafToFlip.classList.remove("flipped");
+
+          // Temporarily boost z-index during the flip back
+          leafToFlip.style.zIndex = 99;
+
+          // After animation ends, restore original right-stack z-index
+          setTimeout(() => {
+            leafToFlip.style.zIndex = maxLeaves - currentLeaf;
+            isAnimating = false;
+          }, 800);
+
+          updateBookPosition();
+          updateControls();
+        }
+
+        // Button Event Listeners
+        btnNext.addEventListener("click", flipNext);
+        btnPrev.addEventListener("click", flipPrev);
+
+        // Allow clicking directly on the pages to flip
+        leaves.forEach((leaf) => {
+          const frontFace = leaf.querySelector(".face-front");
+          const backFace = leaf.querySelector(".face-back");
+
+          // Clicking the front (right side) goes to Next
+          frontFace.addEventListener("click", (e) => {
+            // Prevent flipping if they clicked a link or button
+            if (e.target.tagName.toLowerCase() === "a") return;
+            flipNext();
+          });
+
+          // Clicking the back (left side) goes to Prev
+          backFace.addEventListener("click", (e) => {
+            if (e.target.tagName.toLowerCase() === "a") return;
+            flipPrev();
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
